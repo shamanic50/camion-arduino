@@ -1,3 +1,18 @@
+/* Salut Frero, 
+   T'as déjà fait 3 commits, bien joué, t'as vite compris le truc !
+   Voici une petit modif depuis ma branch. 
+   Pour le vocabulaire git : 
+      -> J'ai "forker" ma branch depuis la tienne
+	  -> Je fait cette modif. 
+	  -> Je "commit" (add et commit) 
+      -> Je "push" (en tout cas pour moi sur ma branch de github depuis mon pc). 
+	  -> Je fait une "pull-request" pour que tu accepte les modifs. 
+   Affaire à suivre, pareil de ton cotes, c'est pas forcément évident de "puller" ma modif (du coup la branche Master de Mon repo camioin-arduino). 
+   En gros faut faire l'inverse. 
+      -> Tu accepte ma modif sur github. 
+	  -> Tu "pull" 
+   Je crois que c'est tout mais faudra peut être "merger" si t'as fait des modifs. 
+*/
 // Code pour camion amennagé en cours de creation
 /* ce code est realiser pour le controle de différents parametre dans le camion
   les systemes prévus :
