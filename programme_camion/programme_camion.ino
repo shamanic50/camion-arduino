@@ -45,10 +45,11 @@ const int gauche = 3;
 const int droite = 4;
 const int select = 5;
 const int rien = 0;
-const int interruptPin = 2// pin digital 2 pour interruption numero0
+const int interruptPin = 2 ; // pin digital 2 pour interruption numero0
 volatile int choix;
 int fonction = 1;
 int fonctionBis = 2;
+
 
 //pour la temperature :
 float t;
@@ -62,8 +63,8 @@ int gazcapteur;
 float alcool = 2;
 
 // pour la ventil
-boolean x;
-const int pinVentil = 3; // relais ventil sur pin digitale 3
+int x = 2;
+const int pinVentil = 13; // relais ventil sur pin digitale 
 
 //pour le niveau d'eau
 const int tirPin = 12; // brocha 12 emet le son
@@ -80,39 +81,59 @@ float batteriemax = 0;
 //pour l'extinction automatique
 unsigned long temps;
 unsigned long tempsbis;
-const int pinLcd =10;
+const int pinLcd = 10;
+unsigned long ref = millis();
 
 // creation des fonction :
 /*rappel des fonctions :
   bouton() : donne la valeur droite,gauche,.. a choix
   ethylometre () donne une valeur a alcool
-  temperature() valeur a : h et t
+  Temperature() valeur a : h et t
   ventil() : x=0 ventil eteinte x=1 allumé
-   eau() : donne une valeur a cm
+   Eau() : donne une valeur a cm
   batterie() : donne une valeur a batterie en volt */
 
 void bouton() {   // fonction qui retourne le bouton appuyer
-    delay(50);
-    boutonLCD = analogRead(A0); // 5 boutons sur le shield defini sur la valeur analogique pin 0
-    if (boutonLCD < 50)  {choix= droite; }
-   else if (boutonLCD < 195) {choix= haut;}
-else if (boutonLCD < 380) {choix= bas;}
-   else if (boutonLCD < 560) {choix= gauche;}
-else if (boutonLCD < 790) {choi= select;}
-    else if (boutonLCD > 789) {choix=rien ;}
-    
+  delay(100);
+  boutonLCD = analogRead(A0); // 5 boutons sur le shield defini sur la valeur analogique pin 0
+  if (boutonLCD < 100)  {
+    choix = droite;
+  }
+  else if (boutonLCD < 250) {
+    choix = haut;
+  }
+  else if (boutonLCD < 400) {
+    choix = bas;
+  }
+  else if (boutonLCD < 560) {
+    choix = gauche;
+  }
+  else if (boutonLCD < 790) {
+    choix = select ;
+  }
+  else if (boutonLCD > 789) {
+    choix = rien ;
+  }
+  delay(150);
 }
 
 
 
 void ethylometre() {  //fonction pour donner une valeur à l'ethylometre
+  RetourMenu();
   gazcapteur = analogRead (A2); // capteur MQ3 branchée sur pin analogique A2
   alcool = map(gazcapteur, 0, 1023, 0, 10);
   // capteur mesure entre 0.05 et 10 mg/l d'alcool dans l'air
-  delay(200);
-
+ lcd.setCursor(0, 0);
+  lcd.print("MQ3:");
+  lcd.print(gazcapteur);
+  lcd.print(" 0,25mg/l");
+  lcd.setCursor(0, 1);
+  lcd.print("taux:") ;
+  lcd.print(alcool);
+  lcd.print("mg/l    ");
 }
-void temperature() { // fonction pour le capteur temperarure
+void Temperature() { // fonction pour le capteur temperarure
   // valeur de -40 a 80 degres temperature
   // valeur de 0 a 100% humidité
   // ne pas effectue plus d'une fois toutes les 2 secondes
@@ -124,39 +145,65 @@ void temperature() { // fonction pour le capteur temperarure
   if (h > hmax) {
     hmax = h;
   }
-
-
+}
+void lcdTemperature() {
+  RetourMenu();
+  Temperature();
+  lcd.setCursor(0, 0);
+  lcd.print("T:");
+  lcd.print(t);
+  lcd.print("C    ");
+  lcd.setCursor(7, 0);
+  lcd.print("Max:") ;
+  lcd.print(tmax);
+  lcd.print("C    ");
+  lcd.setCursor(0, 1);
+  lcd.print("H:");
+  lcd.print(h);
+  lcd.print("%     ");
+  lcd.setCursor(7, 1);
+  lcd.print("Max:");
+  lcd.print(hmax);
+  lcd.print("%    ");
 }
 
 void ventil() { // fonction pour la ventil
-    if (x = true) {
-      digitalWrite (pinVentil, 0);
-      lcd.write("extracteur off");
-    }
-    else {
-      digitalWrite (pinVentil, 1);
-      lcd.write("extracteur on");
-    }
+  RetourMenu();
+  if (choix == droite) {
+    x = 0 - x ;
+  }
+  lcd.print("extracteur  :   ");
+  lcd.setCursor(0, 1);
+  if (x > 0) {
+    digitalWrite (pinVentil,HIGH);
+    lcd.write("        off     ");
+  }
+  else if (x < 0) {
+    digitalWrite (pinVentil, LOW);
+    lcd.write("        on      ");
+  }
+  // x defini si la ventil est allumer ou eteinte ventil() execute la commande
 
-    if (choix == gauche) {
-      x = true;
-    }
-    if (choix == droite) {
-      x = false ;
-    }
-
-    // x defini si la ventil est allumer ou eteinte ventil() execute la commande
-    delay(200);
-  
+  ventil();
 }
 
-void eau() {
+void Eau() {
   digitalWrite (tirPin, HIGH);
   delayMicroseconds (10);
   digitalWrite (tirPin, LOW);
   echo = pulseIn(echo, HIGH);
-  cm = echo / 58; //calcul la distance en cm de l'obstacle rencontré 
-    //ne pas faire plus d'une mesure par seconde
+  cm = echo / 58; //calcul la distance en cm de l'obstacle rencontré
+  //ne pas faire plus d'une mesure par seconde
+}
+void lcdEau(){
+  RetourMenu();
+  Eau();
+  lcd.setCursor(0, 0);
+  lcd.print("Eau: ");
+  lcd.print(cm); //volume à definir selon le jerricane : cm = distance niveu eau
+  lcd.print("L  ");
+  lcd.setCursor(0, 1);
+  lcd.print("   Vmax a 20L   ");
 }
 
 void Batterie() {//mesure du niveau de batterie
@@ -166,112 +213,117 @@ void Batterie() {//mesure du niveau de batterie
     batteriemax = batterie;
   }
   // l'entrée lit une valeur de 0 a 1024 qui est remis dans la plage de lecture analogique de 0 a 5v et mulitiplié par le coeff du pont diviseur
-    //ne pas faire plus d'une mesure par 0,5seconde
+  //ne pas faire plus d'une mesure par 0,5seconde
+}
+void lcdBatterie() {
+  RetourMenu();
+  Batterie();
+  lcd.setCursor(0, 0);
+  lcd.print("Volt : ");
+  lcd.print(batterie);
+  lcd.print("V  ");
+  lcd.setCursor(0, 1);
+  lcd.print("Vmax : ");
+  lcd.print(batteriemax);
 }
 
 
 //les fonctions suivantes gèrent l'affichage :
-
+void RetourMenu() {
+  choix = rien;
+  delay(200);
+  if (choix == haut) {
+    lcd.clear();
+    fonctionBis = 0;
+    menu1();
+  }
+}
 void titre() {
-  lcd.clear();
   lcd.setCursor(0, 0);
   lcd.write("Tu veux ?");
   lcd.setCursor(0, 1);
 }
 void menu2() {
-  while  (choix != haut) {
-  choix =  bouton();
-    delay (200);
-    switch (fonction) {
-      case 1 :
-        Batterie();
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Volt : ");
-        lcd.print(batterie);
-        lcd.print("V");
-        lcd.setCursor(0, 1);
-        lcd.print("Vmax : ");
-        lcd.print(batteriemax);
-        break;
-      case 2 :
-        eau();
-        break;
-      case 3:
-        temperature();
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("T: ");
-        lcd.print(t);
-        lcd.print("°C");
-        lcd.setCursor(7, 0);
-        lcd.print("max:") ;
-        lcd.print(tmax);
-        lcd.print("°C");
-        lcd.setCursor(0, 1);
-        lcd.print("H2O:");
-        lcd.print(h);
-        lcd.print("%");
-        lcd.setCursor(7, 1);
-        lcd.print("max:");
-        lcd.print(hmax);
-        lcd.print("%");
-        break;
-      case 4:
-        ventil();
-        break;
-      case 5:
-        ethylometre();
-        break;
-    }
+  RetourMenu();
+  switch (fonction) {
+    case 1 :
+      lcdBatterie();
+      break;
+    case 2 :
+      lcdEau();
+      break;
+    case 3:
+      lcdTemperature();
+      break;
+    case 4:
+      ventil();
+      break;
+    case 5:
+      ethylometre();
+      break;
   }
+  menu2();
 }
-void menu1() {
-   choix = bouton();
-    if (choix == bas) {
-      menu2();
-    }
-    if (choix == gauche) {
-      fonction --;
-    }
-    if (choix == droite) {
-      fonction++;
-    }
-    if (fonction > 5) {
-      fonction = 1;
-    }
-    if (fonction < 1) {
-      fonction = 5;
-    }
 
-    if (fonctionBis != fonction) {
-      switch (fonction) {
-        case 1 : titre();
-          lcd.write ("< La Batterie >");
-          break;
-        case 2 : titre();
-          lcd.write ("< L'eau >");
-          break;
-        case 3: titre();
-          lcd.write ("< Le Climat  >");
-          break;
-        case 4: titre();
-          lcd.write ("< La ventile !>");
-          break;
-        case 5: titre();
-          lcd.write ("< ethylometre >");
-          break;
-      }
-      fonctionBis = fonction ;
-      delay(200);
-    
+void menu1() {
+  titre();
+  choix = rien;
+  delay(200);
+  if (choix == haut) {
+    lcd.clear();
+    fonctionBis = 0;
+    bilan();
+    principale();
   }
+  if (choix == bas) {
+    lcd.clear();
+    choix = rien;
+    menu2();
+  }
+  if (choix == gauche) {
+    fonction --;
+  }
+  if (choix == droite) {
+    fonction++;
+  }
+  if (fonction > 5) {
+    fonction = 1;
+  }
+  if (fonction < 1) {
+    fonction = 5;
+  }
+
+  if (fonctionBis != fonction) {
+    switch (fonction) {
+      case 1 : titre();
+        lcd.write ("< La Batterie  >");
+        break;
+      case 2 : titre();
+        lcd.write ("<    L'eau     >");
+        break;
+      case 3: titre();
+        lcd.write ("<  Le Climat   >");
+        break;
+      case 4: titre();
+        lcd.write ("< La ventile ! >");
+        break;
+      case 5: titre();
+        lcd.write ("< Ethylometre  >");
+        break;
+    }
+    fonctionBis = fonction ;
+
+  }
+
+  menu1();
 }
+
+
 
 void bilan() {
   Batterie();
-  temperature();
-  eau();
+  Temperature();
+  Eau();
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print(batterie);
@@ -285,10 +337,21 @@ void bilan() {
   lcd.setCursor(8, 1);
   lcd.print(h);
   lcd.print("%H2O");
+  fonctionBis = 0;
 }
 
 
 
+void extinction() {
+  ref = millis();
+  if ( choix == rien && ref - temps > 180000 ) {
+    digitalWrite (pinLcd, HIGH);
+  }
+  else if ( choix == rien && ref - tempsbis > 10000) {
+    bilan();
+    tempsbis = ref;
+  }
+}
 
 
 
@@ -298,15 +361,15 @@ void bilan() {
 
 void setup() {
   attachInterrupt(0, bouton, FALLING);
-  pinMode(10,OUTPUT);
-  digitalWrite (10,LOW);
+  pinMode(10, OUTPUT);
+  digitalWrite (10, LOW);
   dht.begin();// mise en marche sonde dht
   lcd.begin(16, 2); //initialisation ecran
   lcd.setCursor(0, 0);
-  lcd.write("Bienvenue"); //message d'intro
+  lcd.write("He! Bienvenue"); //message d'intro
   delay (1000);
   lcd.setCursor(0, 1);
-  lcd.write("Hein !!"); // de OUF !!
+  lcd.write("Hein !!!"); // de OUF !!
   delay(1000);
 
   //initialisation ventil:
@@ -314,50 +377,73 @@ void setup() {
   pinMode(pinVentil, OUTPUT); // ventilateur camion branché sur 12v
   //commandé par un relais relié a pin digitale pinVentil
 
-  digitalWrite (pinVentil, 0); // initialisation ventil eteinte
+  digitalWrite (pinVentil, HIGH); // initialisation ventil eteinte
 
   //initialisation niveau d'eau :
   pinMode (tirPin, OUTPUT);
   digitalWrite(tirPin, LOW);
   pinMode (echoPin, INPUT);
- 
 
+  bilan();
+  choix = rien;
+  delay(200);
 
-
-bilan();
-    
 }
 
-void loop() {
-  unsigned long ref = millis();
-   if ( choix == rien && ref - temps > 60000 ){
-      digitalWrite (pinLcd,HIGH);}
-   else if ( choix == rien && ref - tempsbis > 10000) {
-      bilan();
-      tempsbis = ref; }
-  
-   else if (choix == bas) {
-      titre();
-      menu1();
-      menu2();
-    }
-   else if (choix == droite || choix== gauche){
-      digitalWrite (pinLcd,LOW);
-        lcd.begin (16,2);
-      temps = ref;
+void principale() {
+  choix = rien;
+  delay(200);
+  extinction();
+  if (choix == bas) {
+    choix = rien;
+    lcd.clear();
+    menu1();
+  }
+  else {
+    principale();
   }
 }
+void loop() {
+  principale();
+}
+
+
+
+
+
+
+
+
 
 void checkbouton () { // fonction pour verifier les boutons
 
   lcd.setCursor(0, 1);
-  choix = bouton();
-  if (choix != rien) {
-    lcd.clear ();
-    lcd.write (choix);
+  lcd.clear ();
+  lcd.print (choix);
+  lcd.print ("   ");
+  lcd.print (boutonLCD);
+  boutonLCD = analogRead(A0); // 5 boutons sur le shield defini sur la valeur analogique pin 0
+  if (boutonLCD < 100)  {
+    choix = droite;
+  }
+  else if (boutonLCD < 240) {
+    choix = haut;
+  }
+  else if (boutonLCD < 400) {
+    choix = bas;
+  }
+  else if (boutonLCD < 560) {
+    choix = gauche;
+  }
+  else if (boutonLCD < 790) {
+    choix = select ;
+  }
+  else if (boutonLCD > 789) {
+    choix = rien ;
+  }
   delay(500);
-  }}
 
+}
 
 
 
