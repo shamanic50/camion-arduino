@@ -1,18 +1,3 @@
-/* Salut Frero, 
-   T'as déjà fait 3 commits, bien joué, t'as vite compris le truc !
-   Voici une petit modif depuis ma branch. 
-   Pour le vocabulaire git : 
-      -> J'ai "forker" ma branch depuis la tienne
-	  -> Je fait cette modif. 
-	  -> Je "commit" (add et commit) 
-      -> Je "push" (en tout cas pour moi sur ma branch de github depuis mon pc). 
-	  -> Je fait une "pull-request" pour que tu accepte les modifs. 
-   Affaire à suivre, pareil de ton cotes, c'est pas forcément évident de "puller" ma modif (du coup la branche Master de Mon repo camioin-arduino). 
-   En gros faut faire l'inverse. 
-      -> Tu accepte ma modif sur github. 
-	  -> Tu "pull" 
-   Je crois que c'est tout mais faudra peut être "merger" si t'as fait des modifs. 
-*/
 // Code pour camion amennagé en cours de creation
 /* ce code est realiser pour le controle de différents parametre dans le camion
   les systemes prévus :
@@ -60,14 +45,14 @@ float hmax = 0;
 
 // pour l'ethilometre
 int gazcapteur;
-float alcool = 2;
+float alcool;
 
 // pour la ventil
-int x = 2;
-const int pinVentil = 13; // relais ventil sur pin digitale 
+int x = 0;
+const int pinVentil = 3; // relais ventil sur pin digitale
 
 //pour le niveau d'eau
-const int tirPin = 12; // brocha 12 emet le son
+const int tirPin = 12; // broche 12 emet le son
 const int echoPin = 11; // broche 11 recoit l'echo
 long echo;
 long cm;
@@ -122,15 +107,15 @@ void bouton() {   // fonction qui retourne le bouton appuyer
 void ethylometre() {  //fonction pour donner une valeur à l'ethylometre
   RetourMenu();
   gazcapteur = analogRead (A2); // capteur MQ3 branchée sur pin analogique A2
-  alcool = map(gazcapteur, 0, 1023, 0, 10);
+  alcool = map(gazcapteur, 55, 1023, 0, 1000);
   // capteur mesure entre 0.05 et 10 mg/l d'alcool dans l'air
- lcd.setCursor(0, 0);
+  lcd.setCursor(0, 0);
   lcd.print("MQ3:");
-  lcd.print(gazcapteur);
-  lcd.print(" 0,25mg/l");
+  lcd.print(int(alcool));
+  lcd.print("  0,25mg/l");
   lcd.setCursor(0, 1);
   lcd.print("taux:") ;
-  lcd.print(alcool);
+  lcd.print( abs(alcool / 1000));
   lcd.print("mg/l    ");
 }
 void Temperature() { // fonction pour le capteur temperarure
@@ -170,20 +155,30 @@ void lcdTemperature() {
 void ventil() { // fonction pour la ventil
   RetourMenu();
   if (choix == droite) {
-    x = 0 - x ;
+    x=x+1;
+  }
+  if ((x > 3) || (x < 0)) {
+    x = 0;
   }
   lcd.print("extracteur  :   ");
   lcd.setCursor(0, 1);
-  if (x > 0) {
-    digitalWrite (pinVentil,HIGH);
-    lcd.write("        off     ");
+  if (x == 0) {
+    analogWrite (pinVentil, 255);
+    lcd.write("     arret      ");
   }
-  else if (x < 0) {
-    digitalWrite (pinVentil, LOW);
-    lcd.write("        on      ");
+  else if (x == 1) {
+    analogWrite (pinVentil, 170);
+    lcd.write("    marche 1/3  ");
+  }
+  else if (x == 2) {
+    analogWrite (pinVentil, 85);
+    lcd.write("    marche 2/3  ");
+  }
+  else if (x == 3) {
+    analogWrite (pinVentil, 0);
+    lcd.write("    marche 3/3  ");
   }
   // x defini si la ventil est allumer ou eteinte ventil() execute la commande
-
   ventil();
 }
 
@@ -195,7 +190,7 @@ void Eau() {
   cm = echo / 58; //calcul la distance en cm de l'obstacle rencontré
   //ne pas faire plus d'une mesure par seconde
 }
-void lcdEau(){
+void lcdEau() {
   RetourMenu();
   Eau();
   lcd.setCursor(0, 0);
@@ -230,6 +225,7 @@ void lcdBatterie() {
 
 //les fonctions suivantes gèrent l'affichage :
 void RetourMenu() {
+  ref = millis();
   choix = rien;
   delay(200);
   if (choix == haut) {
