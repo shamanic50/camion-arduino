@@ -22,7 +22,7 @@ DHT dht(DHTPIN, DHTTYPE);// initialise capteur
 
 
 //variable pour les boutons :
-int boutonLCD;
+volatile int boutonLCD;
 
 const int haut = 1;
 const int bas = 2;
@@ -30,7 +30,8 @@ const int gauche = 3;
 const int droite = 4;
 const int select = 5;
 const int rien = 0;
-int choix;
+const int interruptPin = 2// pin digital 2 pour interruption numero0
+volatile int choix;
 int fonction = 1;
 int fonctionBis = 2;
 
@@ -64,6 +65,7 @@ float batteriemax = 0;
 //pour l'extinction automatique
 unsigned long temps;
 unsigned long tempsbis;
+const int pinLcd =10;
 
 // creation des fonction :
 /*rappel des fonctions :
@@ -74,16 +76,16 @@ unsigned long tempsbis;
    eau() : donne une valeur a cm
   batterie() : donne une valeur a batterie en volt */
 
-int bouton() {   // fonction qui retourne le bouton appuyer
+void bouton() {   // fonction qui retourne le bouton appuyer
+    delay(50);
     boutonLCD = analogRead(A0); // 5 boutons sur le shield defini sur la valeur analogique pin 0
-    if (boutonLCD < 50)  return droite; 
-    if (boutonLCD < 195) return haut;
-if (boutonLCD < 380) return bas;
-   if (boutonLCD < 560) return gauche;
-if (boutonLCD < 790) return select;
- if (boutonLCD > 789) return rien ;
+    if (boutonLCD < 50)  {choix= droite; }
+   else if (boutonLCD < 195) {choix= haut;}
+else if (boutonLCD < 380) {choix= bas;}
+   else if (boutonLCD < 560) {choix= gauche;}
+else if (boutonLCD < 790) {choi= select;}
+    else if (boutonLCD > 789) {choix=rien ;}
     
-  delay(200);
 }
 
 
@@ -98,9 +100,7 @@ void ethylometre() {  //fonction pour donner une valeur à l'ethylometre
 void temperature() { // fonction pour le capteur temperarure
   // valeur de -40 a 80 degres temperature
   // valeur de 0 a 100% humidité
-  dht.begin();
-  delay(2000);
-
+  // ne pas effectue plus d'une fois toutes les 2 secondes
   h = dht.readHumidity();
   t = dht.readTemperature();
   if (t > tmax) {
@@ -114,7 +114,6 @@ void temperature() { // fonction pour le capteur temperarure
 }
 
 void ventil() { // fonction pour la ventil
-  while (choix != haut) {
     if (x = true) {
       digitalWrite (pinVentil, 0);
       lcd.write("extracteur off");
@@ -123,7 +122,6 @@ void ventil() { // fonction pour la ventil
       digitalWrite (pinVentil, 1);
       lcd.write("extracteur on");
     }
-    choix = bouton();
 
     if (choix == gauche) {
       x = true;
@@ -134,7 +132,7 @@ void ventil() { // fonction pour la ventil
 
     // x defini si la ventil est allumer ou eteinte ventil() execute la commande
     delay(200);
-  }
+  
 }
 
 void eau() {
@@ -142,8 +140,8 @@ void eau() {
   delayMicroseconds (10);
   digitalWrite (tirPin, LOW);
   echo = pulseIn(echo, HIGH);
-  cm = echo / 58; //calcul la distance en cm de l'obstacle rencontré
-  delay (1000);
+  cm = echo / 58; //calcul la distance en cm de l'obstacle rencontré 
+    //ne pas faire plus d'une mesure par seconde
 }
 
 void Batterie() {//mesure du niveau de batterie
@@ -153,7 +151,7 @@ void Batterie() {//mesure du niveau de batterie
     batteriemax = batterie;
   }
   // l'entrée lit une valeur de 0 a 1024 qui est remis dans la plage de lecture analogique de 0 a 5v et mulitiplié par le coeff du pont diviseur
-  delay(500);
+    //ne pas faire plus d'une mesure par 0,5seconde
 }
 
 
@@ -214,7 +212,6 @@ void menu2() {
   }
 }
 void menu1() {
-  while (choix = !haut) {
    choix = bouton();
     if (choix == bas) {
       menu2();
@@ -252,7 +249,7 @@ void menu1() {
       }
       fonctionBis = fonction ;
       delay(200);
-    }
+    
   }
 }
 
@@ -285,15 +282,17 @@ void bilan() {
 
 
 void setup() {
+  attachInterrupt(0, bouton, FALLING);
   pinMode(10,OUTPUT);
   digitalWrite (10,LOW);
-  lcd.begin(16, 2);
+  dht.begin();// mise en marche sonde dht
+  lcd.begin(16, 2); //initialisation ecran
   lcd.setCursor(0, 0);
-  lcd.write("Une ambulance"); //message d'intro
+  lcd.write("Bienvenue"); //message d'intro
   delay (1000);
   lcd.setCursor(0, 1);
-  lcd.write("De OUF !!"); // de OUF !!
-  delay(500);
+  lcd.write("Hein !!"); // de OUF !!
+  delay(1000);
 
   //initialisation ventil:
 
@@ -308,7 +307,32 @@ void setup() {
   pinMode (echoPin, INPUT);
  
 
+
+
+bilan();
+    
 }
+
+void loop() {
+  unsigned long ref = millis();
+   if ( choix == rien && ref - temps > 60000 ){
+      digitalWrite (pinLcd,HIGH);}
+   else if ( choix == rien && ref - tempsbis > 10000) {
+      bilan();
+      tempsbis = ref; }
+  
+   else if (choix == bas) {
+      titre();
+      menu1();
+      menu2();
+    }
+   else if (choix == droite || choix== gauche){
+      digitalWrite (pinLcd,LOW);
+        lcd.begin (16,2);
+      temps = ref;
+  }
+}
+
 void checkbouton () { // fonction pour verifier les boutons
 
   lcd.setCursor(0, 1);
@@ -317,36 +341,7 @@ void checkbouton () { // fonction pour verifier les boutons
     lcd.clear ();
     lcd.write (choix);
   delay(500);
-  }
-bilan();
-}
-
-void loop() {
-  choix = bouton();
-  unsigned long ref = millis();
-  if ( ref - temps > 60000 ) {
-      digitalWrite (10,HIGH);
-    }
-     if (ref - tempsbis > 10000) {
-      lcd.clear();
-      bilan();
-      tempsbis = ref;
-    }
-  }
-
-/*  if (choix =! rien) {
-    
-      digitalWrite (10,LOW);
-      temps = ref;
-  }
-    
-    if (choix == bas) {
-      titre();
-      menu1();
-      menu2();
-    }*/
-
-
+  }}
 
 
 
