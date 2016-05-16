@@ -49,19 +49,22 @@ float alcool;
 
 // pour la ventil
 int x = 0;
-const int pinVentil = 3; // relais ventil sur pin digitale
+const int pinVentil = 11; // relais ventil sur pin digitale
+
 
 //pour le niveau d'eau
-const int tirPin = 12; // broche 12 emet le son
-const int echoPin = 11; // broche 11 recoit l'echo
+const int tirPin = 13; // broche 12 emet le son
+const int echoPin = 12; // broche 11 recoit l'echo
 long echo;
 long cm;
 
 //pour la jauge de batterie
-const int batteriePin = 1 ; //pont diviseur de tension batterie relié analogique 4
+#define batteriePin  A1  //pont diviseur de tension batterie relié analogique 5
 int coeff = 4; // definie le  coeff de division du pont diviseur, a calculer avec les resistances
 float batterie;
 float batteriemax = 0;
+int lectureBatterie;
+int i=0;
 
 //pour l'extinction automatique
 unsigned long temps;
@@ -107,7 +110,7 @@ void bouton() {   // fonction qui retourne le bouton appuyer
 void ethylometre() {  //fonction pour donner une valeur à l'ethylometre
   RetourMenu();
   gazcapteur = analogRead (A2); // capteur MQ3 branchée sur pin analogique A2
-  alcool = map(gazcapteur, 55, 1023, 0, 1000);
+  alcool = map(gazcapteur, 40, 1023, 0, 1000);
   // capteur mesure entre 0.05 et 10 mg/l d'alcool dans l'air
   lcd.setCursor(0, 0);
   lcd.print("MQ3:");
@@ -163,19 +166,19 @@ void ventil() { // fonction pour la ventil
   lcd.print("extracteur  :   ");
   lcd.setCursor(0, 1);
   if (x == 0) {
-    analogWrite (pinVentil, 255);
+    analogWrite (pinVentil, 0);
     lcd.write("     arret      ");
   }
   else if (x == 1) {
-    analogWrite (pinVentil, 170);
+    analogWrite (pinVentil, 235);
     lcd.write("    marche 1/3  ");
   }
   else if (x == 2) {
-    analogWrite (pinVentil, 85);
+    analogWrite (pinVentil, 245);
     lcd.write("    marche 2/3  ");
   }
   else if (x == 3) {
-    analogWrite (pinVentil, 0);
+    analogWrite (pinVentil, 255);
     lcd.write("    marche 3/3  ");
   }
   // x defini si la ventil est allumer ou eteinte ventil() execute la commande
@@ -202,13 +205,12 @@ void lcdEau() {
 }
 
 void Batterie() {//mesure du niveau de batterie
-  int lectureBatterie = analogRead (batteriePin);//pont diciseur de tension batterie branché sur pin A1
-  batterie = map(lectureBatterie, 0, 1023, 0, 5) * coeff ;
+  lectureBatterie = analogRead (batteriePin);//pont diciseur de tension batterie branché sur batteriePin
+  batterie = (lectureBatterie * 20.00/1024.00 );
   if (batterie > batteriemax) {
     batteriemax = batterie;
   }
   // l'entrée lit une valeur de 0 a 1024 qui est remis dans la plage de lecture analogique de 0 a 5v et mulitiplié par le coeff du pont diviseur
-  //ne pas faire plus d'une mesure par 0,5seconde
 }
 void lcdBatterie() {
   RetourMenu();
@@ -218,8 +220,13 @@ void lcdBatterie() {
   lcd.print(batterie);
   lcd.print("V  ");
   lcd.setCursor(0, 1);
-  lcd.print("Vmax : ");
-  lcd.print(batteriemax);
+  i++;
+  if ( i<10){
+  lcd.print("MaxLu:");
+  lcd.print(batteriemax);}
+  else if ( i <20){
+  lcd.print("DANGER si <11,5V");}
+else { i =0;}
 }
 
 
@@ -356,6 +363,18 @@ void extinction() {
 
 
 void setup() {
+    //initialisation ventil:
+
+  pinMode(pinVentil, OUTPUT); // ventilateur camion branché sur 12v
+  //commandé par un relais relié a pin digitale pinVentil
+
+  analogWrite (pinVentil, 0); // initialisation ventil eteinte
+
+  //initialisation niveau d'eau :
+  pinMode (tirPin, OUTPUT);
+  digitalWrite(tirPin, LOW);
+  pinMode (echoPin, INPUT);
+
   attachInterrupt(0, bouton, FALLING);
   pinMode(10, OUTPUT);
   digitalWrite (10, LOW);
@@ -368,17 +387,7 @@ void setup() {
   lcd.write("Hein !!!"); // de OUF !!
   delay(1000);
 
-  //initialisation ventil:
 
-  pinMode(pinVentil, OUTPUT); // ventilateur camion branché sur 12v
-  //commandé par un relais relié a pin digitale pinVentil
-
-  digitalWrite (pinVentil, HIGH); // initialisation ventil eteinte
-
-  //initialisation niveau d'eau :
-  pinMode (tirPin, OUTPUT);
-  digitalWrite(tirPin, LOW);
-  pinMode (echoPin, INPUT);
 
   bilan();
   choix = rien;
